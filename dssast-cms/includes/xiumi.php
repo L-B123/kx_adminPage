@@ -55,6 +55,9 @@ function dssast_xiumi_html( $request ) {
    $content = dssast_safe_import_html( $a['description'] );
    $id = wp_insert_post( wp_slash( array( 'ID' => $old ? $old[0]->ID : 0, 'post_type' => 'post', 'post_status' => 'draft', 'post_author' => $uid, 'post_title' => sanitize_text_field( $a['title'] ), 'post_content' => $content, 'post_excerpt' => sanitize_textarea_field( $a['summary'] ?? '' ), 'meta_input' => array( 'dssast_xiumi_key' => $key, 'dssast_xiumi_hash' => $fingerprint, 'dssast_xiumi_article_id' => (string) $a['article_id'] ) ) ), true );
    if ( is_wp_error( $id ) ) { return dssast_xiumi_fail( 'dssast_insert', 500 ); }
+   dssast_ensure_categories();
+   $news = get_term_by( 'slug', 'dssast-news', 'category' );
+   if ( ! $news || is_wp_error( wp_set_post_categories( $id, array( (int) $news->term_id ), true ) ) ) { return dssast_xiumi_fail( 'dssast_news_category', 500 ); }
    $cover = attachment_url_to_postid( esc_url_raw( $a['picurl'] ?? '' ) );
    if ( $cover && (int) get_post_field( 'post_author', $cover ) === $uid && wp_attachment_is_image( $cover ) ) { set_post_thumbnail( $id, $cover ); }
   }

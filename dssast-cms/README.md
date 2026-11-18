@@ -1,4 +1,8 @@
-# DSSAST CMS 0.2.0
+# DSSAST CMS 0.3.0
+
+本机启动、登录、账号密码位置和操作验收请先阅读 [本地测试指导](LOCAL-TEST-GUIDE.md)。
+
+0.3.0：新增“内容管理”统一后台入口；赛事与笔记采用经典编辑器，避免依赖区块编辑器资源加载。赛事单页自动展示状态、时间及报名链接。新增 `[dssast_notes]`、`[dssast_news]` 和 `[dssast_news category="dssast-announcement"]` 列表。升级自动补建新闻公告分类，秀米新同步稿自动归入新闻草稿。下文旧版 Gutenberg 操作说明以此为准。秀米真实账号联调仍需配置应用与公网回调。
 
 管理员日常操作与逐步验收请先阅读 [管理员使用与测试手册](ADMIN-GUIDE.md)。
 
