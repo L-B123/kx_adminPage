@@ -1,0 +1,60 @@
+<?php
+// Run against a disposable, installed local WordPress: php integration.php /path/to/wp-load.php
+if ( PHP_SAPI !== 'cli' || empty( $argv[1] ) ) { exit(1); }
+putenv('DSSAST_XIUMI_APP_ID=local-test-app');
+putenv('DSSAST_XIUMI_SECRET=' . bin2hex(random_bytes(24)));
+require $argv[1];
+if (wp_get_environment_type() !== 'local') { throw new Exception('Local environment required'); }
+$count = 0;
+function verify($condition, $label) { global $count; if (!$condition) { throw new Exception('FAIL: ' . $label); } ++$count; echo "PASS: $label\n"; }
+wp_set_current_user(1);
+verify(post_type_exists('dssast_note') && post_type_exists('dssast_competition'), 'content types');
+verify((bool)get_term_by('slug', 'dssast-news', 'category'), 'news category');
+$subscriber = wp_insert_user(array('user_login'=>'test_' . bin2hex(random_bytes(4)), 'user_pass'=>bin2hex(random_bytes(16)), 'role'=>'subscriber'));
+verify(!user_can($subscriber, 'edit_posts', 'dssast_note'), 'subscriber cannot edit posts');
+$note = wp_insert_post(array('post_type'=>'dssast_note', 'post_title'=>'Private note', 'post_status'=>'pending', 'post_author'=>$subscriber));
+wp_set_current_user($subscriber);
+verify(!current_user_can('edit_post', $note), 'subscriber blocked from native editing own pending note');
+verify(strpos(do_shortcode('[dssast_note_submit]'), '提交审核') !== false, 'logged-in submission form');
+wp_set_current_user(0);
+verify(strpos(do_shortcode('[dssast_note_submit]'), '请先') !== false, 'guest login prompt');
+$r = new WP_REST_Request('POST', '/dssast/v1/xiumi/html');
+verify(is_wp_error(dssast_xiumi_auth($r)), 'missing secret rejected');
+$r->set_header('Authorization', 'secret ' . getenv('DSSAST_XIUMI_SECRET'));
+verify(true === dssast_xiumi_auth($r), 'correct secret accepted');
+wp_set_current_user(1);
+$review_note = wp_insert_post(array('post_type'=>'dssast_note','post_title'=>'Review workflow','post_status'=>'pending','post_author'=>$subscriber));
+$_POST = array('dssast_review_nonce'=>wp_create_nonce('dssast_review_' . $review_note),'dssast_return_note'=>'1','dssast_review_reason'=>'请补充来源');
+dssast_review_note($review_note);
+verify(get_post_status($review_note)==='draft' && get_post_meta($review_note,'dssast_review_reason',true)==='请补充来源','administrator returns note with reason');
+$_POST = array(); wp_update_post(array('ID'=>$review_note,'post_status'=>'publish'));
+verify(get_post_status($review_note)==='publish','administrator publishes note');
+wp_delete_post($review_note,true);
+$partner = bin2hex(random_bytes(16)); update_user_meta(1, 'dssast_xiumi_partner', $partner);
+$notify = new WP_REST_Request('POST'); $notify->set_header('Content-Type','application/json');
+$notify->set_body(wp_json_encode(array('type'=>'bind','app_id'=>'local-test-app','partner_user_id'=>$partner,'open_id'=>'local-open')));
+verify(dssast_xiumi_notify($notify)['code'] === 0, 'binding notification');
+$r->set_query_params(array('partner_user_id'=>$partner,'open_id'=>'local-open'));
+$r->set_header('Content-Type','application/json');
+$article = array('article_id'=>random_int(10000,99999999),'title'=>'Imported test','description'=>'<p onclick="alert(1)">hello</p><script>alert(1)</script><!-- wp:shortcode -->[danger]<!-- /wp:shortcode -->','summary'=>'test');
+$r->set_body(wp_json_encode(array('articles'=>array($article))));
+verify(dssast_xiumi_html($r)['code'] === 0, 'HTML import');
+$key=hash('sha256','local-test-app:1:' . $article['article_id']);
+$find = function() use($key) { return get_posts(array('post_type'=>'post','post_status'=>'any','meta_key'=>'dssast_xiumi_key','meta_value'=>$key)); };
+$posts=$find(); verify(count($posts) === 1 && $posts[0]->post_status === 'draft','saved only as draft');
+verify(strpos($posts[0]->post_content, '<script') === false && strpos($posts[0]->post_content, 'onclick') === false && strpos($posts[0]->post_content, '[danger]') === false && strpos($posts[0]->post_content, '<!--') === false, 'unsafe HTML and executable content removed');
+dssast_xiumi_html($r); verify(count($find()) === 1, 'duplicate import deduplicated');
+wp_update_post(array('ID'=>$posts[0]->ID,'post_status'=>'publish'));
+$article['description']='changed'; $r->set_body(wp_json_encode(array('articles'=>array($article))));
+verify(is_wp_error(dssast_xiumi_html($r)), 'published content protected');
+$r->set_query_params(array('partner_user_id'=>$partner,'open_id'=>'wrong'));
+verify(is_wp_error(dssast_xiumi_html($r)), 'wrong binding rejected');
+$fields=array('dssast_status'=>'open','dssast_date'=>'2026-02-30','dssast_registration_start'=>'','dssast_registration_end'=>'','dssast_registration_url'=>'');
+verify(dssast_validate_fields($fields) === false, 'invalid calendar date rejected');
+$fields['dssast_date']='2026-11-18'; $fields['dssast_registration_url']='javascript:alert(1)';
+verify(dssast_validate_fields($fields) === false, 'unsafe registration URL rejected');
+$notify->set_body(wp_json_encode(array('type'=>'secret_reset','app_id'=>'local-test-app')));
+dssast_xiumi_notify($notify); verify(is_wp_error(dssast_xiumi_auth($r)), 'reset revokes old secret');
+wp_delete_post($posts[0]->ID,true); wp_delete_post($note,true);
+require_once ABSPATH . 'wp-admin/includes/user.php'; wp_delete_user($subscriber);
+echo "Passed $count checks on WordPress $wp_version / PHP " . PHP_VERSION . "\n";
