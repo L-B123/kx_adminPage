@@ -20,6 +20,9 @@ add_action( 'init', function () {
 
 add_action( 'admin_menu', function () {
  add_menu_page( '内容管理', '内容管理', 'manage_options', 'dssast-management', 'dssast_management_page', 'dashicons-welcome-write-blog', 25 );
+ foreach ( dssast_management_views() as $key => $view ) {
+  add_submenu_page( 'dssast-management', $view[0], $view[0], 'manage_options', 'dssast-view-' . $key, function () use ( $key ) { dssast_management_list( $key ); } );
+ }
 } );
 function dssast_management_page() {
  if ( ! current_user_can( 'manage_options' ) ) { return; }
@@ -30,8 +33,43 @@ function dssast_management_page() {
   if ( $term ) { $links[$label . '管理'] = 'edit.php?category_name=' . $slug; $links['添加' . $label] = 'post-new.php?dssast_category=' . $term->term_id; }
  }
  $links['秀米同步设置'] = 'tools.php?page=dssast-xiumi';
- foreach ( $links as $label => $url ) { echo '<p><a class="button" href="' . esc_url( admin_url( $url ) ) . '">' . esc_html( $label ) . '</a></p>'; }
+ $links['笔记管理'] = 'admin.php?page=dssast-view-notes';
+ $links['待审核笔记'] = 'admin.php?page=dssast-view-pending';
+ $links['新闻管理'] = 'admin.php?page=dssast-view-news';
+ $links['公告管理'] = 'admin.php?page=dssast-view-announcements';
+ foreach ( array( '赛事' => array( '赛事列表', '添加赛事' ), '学习笔记' => array( '笔记管理', '待审核笔记', '添加笔记' ), '新闻' => array( '新闻管理', '添加新闻' ), '公告' => array( '公告管理', '添加公告' ), '内容同步' => array( '秀米同步设置' ) ) as $heading => $items ) {
+  echo '<h2>' . esc_html( $heading ) . '</h2><p>';
+  foreach ( $items as $label ) { if ( isset( $links[$label] ) ) { echo '<a class="button" style="margin:0 12px 8px 0" href="' . esc_url( admin_url( $links[$label] ) ) . '">' . esc_html( $label ) . '</a>'; } }
+  echo '</p>';
+ }
  echo '<p>秀米稿件同步为草稿，审核发布后展示。前台可使用 [dssast_competitions]、[dssast_notes]、[dssast_news]；公告使用 [dssast_news category="dssast-announcement"]。</p></div>';
+}
+function dssast_management_views() {
+ return array( 'notes' => array( '全部笔记', 'dssast_note', '' ), 'pending' => array( '待审核笔记', 'dssast_note', '' ), 'news' => array( '新闻管理', 'post', 'dssast-news' ), 'announcements' => array( '公告管理', 'post', 'dssast-announcement' ) );
+}
+function dssast_management_list( $key ) {
+ if ( ! current_user_can( 'manage_options' ) ) { return; }
+ $views = dssast_management_views();
+ if ( ! isset( $views[$key] ) ) { return; }
+ $view = $views[$key];
+ $page = isset( $_GET['paged'] ) && is_string( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+ $args = array( 'post_type' => $view[1], 'post_status' => 'pending' === $key ? 'pending' : array( 'publish', 'pending', 'draft', 'future', 'private' ), 'posts_per_page' => 20, 'paged' => $page );
+ if ( $view[2] ) { $args['category_name'] = $view[2]; }
+ $query = new WP_Query( $args );
+ echo '<div class="wrap"><h1>' . esc_html( $view[0] ) . '</h1><p>' . esc_html( 'pending' === $key ? '仅显示等待审核的学生投稿；退回的草稿和已发布笔记不在此列。' : '显示本栏目全部草稿、待审核、已发布、定时和私密内容，不包含回收站。' ) . '</p>';
+ echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=dssast-management' ) ) . '">返回内容管理</a></p>';
+ if ( 'dssast_note' === $view[1] ) { echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=dssast-view-notes' ) ) . '">全部笔记</a> | <a href="' . esc_url( admin_url( 'admin.php?page=dssast-view-pending' ) ) . '">待审核笔记</a></p>'; }
+ echo '<table class="widefat striped"><thead><tr><th>标题</th><th>作者</th><th>状态</th><th>日期</th><th>操作</th></tr></thead><tbody>';
+ foreach ( $query->posts as $item ) {
+  $status = get_post_status_object( $item->post_status );
+  echo '<tr><td>' . esc_html( $item->post_title ?: '（无标题）' ) . '</td><td>' . esc_html( get_the_author_meta( 'display_name', $item->post_author ) ) . '</td><td>' . esc_html( $status ? $status->label : $item->post_status ) . '</td><td>' . esc_html( $item->post_date ) . '</td><td>';
+  if ( current_user_can( 'edit_post', $item->ID ) ) { echo '<a href="' . esc_url( get_edit_post_link( $item->ID, 'raw' ) ) . '">' . esc_html( 'pending' === $key ? '审核' : '编辑' ) . '</a>'; }
+  echo '</td></tr>';
+ }
+ if ( ! $query->posts ) { echo '<tr><td colspan="5">' . esc_html( 'pending' === $key ? '暂无待审核笔记。' : '本栏目暂无内容。' ) . '</td></tr>'; }
+ echo '</tbody></table><p>' . esc_html( '共 ' . $query->found_posts . ' 条' ) . '</p>';
+ echo wp_kses_post( paginate_links( array( 'base' => add_query_arg( array( 'page' => 'dssast-view-' . $key, 'paged' => '%#%' ), admin_url( 'admin.php' ) ), 'format' => '', 'current' => $page, 'total' => $query->max_num_pages ) ) );
+ echo '</div>';
 }
 add_filter( 'default_category', function ( $default ) {
  if ( ! is_admin() || ! current_user_can( 'manage_options' ) || ! isset( $_GET['dssast_category'] ) || ! is_string( $_GET['dssast_category'] ) ) { return $default; }
