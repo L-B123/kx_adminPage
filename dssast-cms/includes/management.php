@@ -29,14 +29,18 @@ function dssast_content_list( $atts, $content, $tag ) {
 add_shortcode( 'dssast_notes', 'dssast_content_list' );
 add_shortcode( 'dssast_news', 'dssast_content_list' );
 
+add_action( 'wp_enqueue_scripts', function () {
+ wp_enqueue_style( 'dssast-public', plugins_url( 'assets/public.css', DSSAST_CMS_FILE ), array(), DSSAST_CMS_VERSION );
+} );
+
 add_filter( 'the_content', function ( $content ) {
  if ( ! is_singular( 'dssast_competition' ) || ! in_the_loop() || ! is_main_query() || post_password_required() ) { return $content; }
- $html = '<section class="dssast-details"><h2>赛事信息</h2>';
+ $details = '';
  foreach ( dssast_fields() as $field => $label ) {
   $value = get_post_meta( get_the_ID(), 'dssast_' . $field, true );
   if ( ! is_string( $value ) || '' === $value ) { continue; }
-  if ( 'registration_url' === $field ) { $html .= '<p><a rel="nofollow" href="' . esc_url( $value, array( 'http', 'https' ) ) . '">前往报名</a></p>'; }
-  else { $html .= '<p>' . esc_html( $label . '：' . ( 'status' === $field ? ( dssast_statuses()[$value] ?? '未设置' ) : str_replace( 'T', ' ', $value ) ) ) . '</p>'; }
+  if ( 'registration_url' === $field ) { $details .= '<p><a class="dssast-registration" rel="nofollow" href="' . esc_url( $value, array( 'http', 'https' ) ) . '">前往报名</a></p>'; }
+  else { $details .= '<p>' . esc_html( $label . '：' . ( 'status' === $field ? ( dssast_statuses()[$value] ?? '未设置' ) : str_replace( 'T', ' ', $value ) ) ) . '</p>'; }
  }
- return $content . $html . '</section>';
+ return '' === $details ? $content : $content . '<section class="dssast-details"><h2>赛事信息</h2>' . $details . '</section>';
 } );

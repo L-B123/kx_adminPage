@@ -10,6 +10,8 @@ $count = 0;
 function verify($condition, $label) { global $count; if (!$condition) { throw new Exception('FAIL: ' . $label); } ++$count; echo "PASS: $label\n"; }
 wp_set_current_user(1);
 verify(post_type_exists('dssast_note') && post_type_exists('dssast_competition'), 'content types');
+verify(get_post_type_object('dssast_note')->has_archive === 'dssast-notes' &&
+    get_post_type_object('dssast_note')->rewrite['slug'] === 'notes', 'note archive leaves the landing page and existing single-note permalinks available');
 $news = get_term_by('slug', 'dssast-news', 'category');
 $announcement = get_term_by('slug', 'dssast-announcement', 'category');
 verify($news && $announcement, 'news and announcement categories');
@@ -55,6 +57,13 @@ wp_update_post(array('ID' => $review_note, 'post_status' => 'publish'));
 remove_action('publish_dssast_note', $count_publish);
 verify(0 === $publish_count, 'returning a note never fires a publish event');
 verify(get_post_status($review_note)==='draft' && get_post_meta($review_note,'dssast_review_reason',true)==='请补充来源','administrator returns note with reason');
+wp_set_current_user($subscriber);
+verify(strpos(do_shortcode('[dssast_note_submit]'), 'dssast_edit_note=' . $review_note) !== false, 'resubmission link avoids the note post type query variable');
+$_GET['dssast_edit_note'] = (string) $review_note;
+verify(strpos(do_shortcode('[dssast_note_submit]'), '请补充来源') !== false, 'author sees review reason when editing a returned note');
+wp_set_current_user(1);
+verify(strpos(do_shortcode('[dssast_note_submit]'), '此笔记不可修改') !== false, 'other accounts cannot open the resubmission form');
+unset($_GET['dssast_edit_note']);
 $_POST = array(); wp_update_post(array('ID'=>$review_note,'post_status'=>'publish'));
 verify(get_post_status($review_note)==='publish','administrator publishes note');
 $public_notes = do_shortcode('[dssast_notes limit="50"]');

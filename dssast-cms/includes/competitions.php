@@ -91,7 +91,7 @@ add_shortcode( 'dssast_competitions', function ( $atts ) {
   foreach ( dssast_fields() as $field => $label ) {
    $value = get_post_meta( $post->ID, 'dssast_' . $field, true );
    if ( ! is_string( $value ) || '' === $value ) { continue; }
-   if ( 'registration_url' === $field ) { $html .= '<p><a rel="nofollow" href="' . esc_url( $value, array( 'http', 'https' ) ) . '">报名链接</a></p>'; }
+   if ( 'registration_url' === $field ) { $html .= '<p><a class="dssast-registration" rel="nofollow" href="' . esc_url( $value, array( 'http', 'https' ) ) . '">报名链接</a></p>'; }
    else { $value = 'status' === $field ? ( dssast_statuses()[$value] ?? '未设置' ) : str_replace( 'T', ' ', $value ); $html .= '<p>' . esc_html( $label . '：' . $value ) . '</p>'; }
   }
   $html .= '</article>';

@@ -29,7 +29,7 @@ add_action( 'admin_menu', function () {
 } );
 
 function dssast_enqueue_admin_style() {
-    wp_enqueue_style( 'dssast-admin', plugins_url( 'assets/admin.css', DSSAST_CMS_FILE ), array( 'dashicons' ), '0.4.0' );
+    wp_enqueue_style( 'dssast-admin', plugins_url( 'assets/admin.css', DSSAST_CMS_FILE ), array( 'dashicons' ), DSSAST_CMS_VERSION );
 }
 
 add_action( 'admin_enqueue_scripts', function ( $hook ) {
@@ -120,7 +120,7 @@ function dssast_management_page() {
             </dl>
         </section>
         <div class="dssast-card-grid">
-            <?php foreach ( $cards as array( $title, $icon, $description, $list_label, $list_url, $add_label, $add_url ) ) : ?>
+            <?php foreach ( $cards as list( $title, $icon, $description, $list_label, $list_url, $add_label, $add_url ) ) : ?>
                 <section class="dssast-card">
                     <span class="dssast-icon dashicons dashicons-<?php echo esc_attr( $icon ); ?>" aria-hidden="true"></span>
                     <h2><?php echo esc_html( $title ); ?></h2>
@@ -155,17 +155,26 @@ function dssast_management_list( $key ) {
     $view = $views[ $key ];
     $pending = 'pending' === $key;
     $page = isset( $_GET['paged'] ) && is_string( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+    $search = isset( $_GET['dssast_search'] ) && is_string( $_GET['dssast_search'] )
+        ? sanitize_text_field( wp_unslash( $_GET['dssast_search'] ) ) : '';
     $args = array(
         'post_type' => $view['type'],
         'post_status' => $pending ? 'pending' : array( 'publish', 'pending', 'draft', 'future', 'private' ),
         'posts_per_page' => 20,
         'paged' => $page,
+        's' => $search,
+        'ignore_sticky_posts' => true,
         'orderby' => $pending ? array( 'modified' => 'ASC', 'ID' => 'ASC' ) : array( 'date' => 'DESC', 'ID' => 'DESC' ),
         'update_post_term_cache' => false,
         'update_post_meta_cache' => false,
     );
     if ( $view['category'] ) {
-        $args['category_name'] = $view['category'];
+        $term = get_term_by( 'slug', $view['category'], 'category' );
+        if ( $term ) {
+            $args['cat'] = (int) $term->term_id;
+        } else {
+            $args['post__in'] = array( 0 );
+        }
     }
 
     $query = new WP_Query( $args );
@@ -182,6 +191,15 @@ function dssast_management_list( $key ) {
             <a class="dssast-text-link" href="<?php echo esc_url( admin_url( 'admin.php?page=dssast-management' ) ); ?>">
                 <span class="dashicons dashicons-arrow-left-alt2" aria-hidden="true"></span>内容管理
             </a>
+            <form class="dssast-search" method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" role="search">
+                <input type="hidden" name="page" value="<?php echo esc_attr( 'dssast-view-' . $key ); ?>">
+                <label class="screen-reader-text" for="dssast-list-search">搜索标题或正文</label>
+                <input type="search" id="dssast-list-search" name="dssast_search" value="<?php echo esc_attr( $search ); ?>" placeholder="搜索标题或正文">
+                <button type="submit" class="button">搜索</button>
+                <?php if ( '' !== $search ) : ?>
+                    <a class="dssast-text-link" href="<?php echo esc_url( dssast_view_url( $key ) ); ?>">清除搜索</a>
+                <?php endif; ?>
+            </form>
             <?php if ( $add_url ) : ?>
                 <a class="button button-primary" href="<?php echo esc_url( $add_url ); ?>"><?php echo esc_html( $add_label[ $key ] ); ?></a>
             <?php endif; ?>
@@ -228,7 +246,7 @@ function dssast_management_list( $key ) {
             <?php else : ?>
                 <div class="dssast-empty">
                     <span class="dssast-icon dashicons dashicons-<?php echo $pending ? 'yes-alt' : 'media-document'; ?>" aria-hidden="true"></span>
-                    <p><?php echo $pending ? '暂无待审核笔记' : '本栏目暂无内容'; ?></p>
+                    <p><?php echo '' !== $search ? '没有匹配的内容' : ( $pending ? '暂无待审核笔记' : '本栏目暂无内容' ); ?></p>
                 </div>
             <?php endif; ?>
             <?php if ( $query->max_num_pages > 1 || $query->posts ) : ?>
@@ -241,6 +259,7 @@ function dssast_management_list( $key ) {
                                 'format' => '&paged=%#%',
                                 'current' => $page,
                                 'total' => $query->max_num_pages,
+                                'add_args' => '' === $search ? array() : array( 'dssast_search' => $search ),
                                 'prev_text' => '上一页',
                                 'next_text' => '下一页',
                             ) ) ); ?>

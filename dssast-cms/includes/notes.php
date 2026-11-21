@@ -3,7 +3,8 @@ defined( 'ABSPATH' ) || exit;
 function dssast_register_notes() {
  $caps = array();
  foreach ( array( 'edit_posts', 'edit_others_posts', 'publish_posts', 'read_private_posts', 'delete_posts', 'delete_private_posts', 'delete_published_posts', 'delete_others_posts', 'edit_private_posts', 'edit_published_posts', 'create_posts' ) as $cap ) { $caps[$cap] = 'manage_options'; }
- register_post_type( 'dssast_note', array( 'labels' => array( 'name' => '学习笔记', 'singular_name' => '笔记', 'add_new_item' => '添加笔记', 'edit_item' => '编辑笔记' ), 'menu_icon' => 'dashicons-book-alt', 'public' => true, 'show_in_rest' => true, 'has_archive' => true, 'rewrite' => array( 'slug' => 'notes' ), 'supports' => array( 'title', 'editor', 'author', 'revisions' ), 'capabilities' => $caps, 'map_meta_cap' => true ) );
+ // Keep single-note permalinks while leaving /notes/ available to the site's landing page.
+ register_post_type( 'dssast_note', array( 'labels' => array( 'name' => '学习笔记', 'singular_name' => '笔记', 'add_new_item' => '添加笔记', 'edit_item' => '编辑笔记' ), 'menu_icon' => 'dashicons-book-alt', 'public' => true, 'show_in_rest' => true, 'has_archive' => 'dssast-notes', 'rewrite' => array( 'slug' => 'notes' ), 'supports' => array( 'title', 'editor', 'author', 'revisions' ), 'capabilities' => $caps, 'map_meta_cap' => true ) );
 }
 add_action( 'init', 'dssast_register_notes' );
 add_action( 'template_redirect', function () {
@@ -16,7 +17,8 @@ add_action( 'template_redirect', function () {
 add_shortcode( 'dssast_note_submit', function () {
  if ( ! is_user_logged_in() ) { return '<p>请先<a href="' . esc_url( wp_login_url( get_permalink() ) ) . '">登录</a>再投稿。</p>'; }
  if ( ! current_user_can( 'read' ) ) { return '<p>当前账号不可投稿。</p>'; }
- $id = isset( $_GET['dssast_note'] ) && is_scalar( $_GET['dssast_note'] ) ? absint( $_GET['dssast_note'] ) : 0;
+ // The post type already registers dssast_note as a public query variable.
+ $id = isset( $_GET['dssast_edit_note'] ) && is_string( $_GET['dssast_edit_note'] ) ? absint( $_GET['dssast_edit_note'] ) : 0;
  $note = $id ? get_post( $id ) : null;
  if ( $id && ( ! $note || 'dssast_note' !== $note->post_type || (int) $note->post_author !== get_current_user_id() || 'draft' !== $note->post_status ) ) { return '<p>此笔记不可修改。</p>'; }
  ob_start();
@@ -30,7 +32,7 @@ add_shortcode( 'dssast_note_submit', function () {
  foreach ( $items as $item ) {
   $labels = array( 'pending' => '待审核', 'draft' => '退回/草稿', 'publish' => '已发布' );
   echo '<li>' . esc_html( $item->post_title . ' — ' . $labels[$item->post_status] );
-  if ( 'draft' === $item->post_status ) { echo ' <a href="' . esc_url( add_query_arg( 'dssast_note', $item->ID, get_permalink() ) ) . '">修改再提交</a>'; }
+  if ( 'draft' === $item->post_status ) { echo ' <a href="' . esc_url( add_query_arg( 'dssast_edit_note', $item->ID, get_permalink() ) ) . '">修改再提交</a>'; }
   echo '</li>';
  }
  echo '</ul></div>'; return ob_get_clean();
@@ -56,7 +58,7 @@ add_action( 'admin_post_dssast_submit_note', function () {
   if ( is_wp_error( $result ) ) { delete_option( $lock ); wp_die( '保存失败，请重试' ); }
  } finally { delete_option( $lock ); }
  $return = isset( $_POST['dssast_return'] ) && is_string( $_POST['dssast_return'] ) ? wp_unslash( $_POST['dssast_return'] ) : home_url( '/' );
- wp_safe_redirect( add_query_arg( 'dssast_submitted', '1', remove_query_arg( 'dssast_note', $return ) ), 303 ); exit;
+ wp_safe_redirect( add_query_arg( 'dssast_submitted', '1', remove_query_arg( 'dssast_edit_note', $return ) ), 303 ); exit;
 } );
 add_action( 'add_meta_boxes_dssast_note', function () {
     add_meta_box( 'dssast_review', '笔记审核', function ( $post ) {

@@ -1,7 +1,7 @@
 .dssast-admin {
     --dssast-ink: #18283d;
     --dssast-muted: #526276;
-    --dssast-line: #dce4ec;
+    --dssast-line: #d5e0e4;
     --dssast-accent: #125a50;
     --dssast-tint: #e8f5ef;
     color: var(--dssast-ink);
@@ -25,8 +25,9 @@
 
 .dssast-overview {
     align-items: center;
-    background: linear-gradient(115deg, #12283d, #174b4a);
+    background: radial-gradient(ellipse at 100% 0, #206357, transparent 65%), linear-gradient(115deg, #112b40, #174b4a);
     border-radius: 18px;
+    box-shadow: 0 8px 20px rgba(18, 40, 61, .12);
     color: #fff;
     display: grid;
     gap: 24px;
@@ -122,7 +123,7 @@
     background: #fff;
     border: 1px solid var(--dssast-line);
     border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(24, 40, 61, .045);
+    box-shadow: 0 2px 8px rgba(24, 40, 61, .06);
 }
 
 .dssast-card {
@@ -130,6 +131,10 @@
     flex-direction: column;
     min-width: 0;
     padding: 20px;
+}
+
+.dssast-card:focus-within {
+    border-color: #87b8ab;
 }
 
 .dssast-icon {
@@ -215,8 +220,34 @@
 }
 
 .dssast-list-toolbar {
-    justify-content: space-between;
-    margin: 20px 0 12px;
+    gap: 12px 20px;
+    margin: 20px 0 14px;
+}
+
+.dssast-search {
+    align-items: center;
+    display: flex;
+    flex: 1 1 240px;
+    gap: 8px;
+    min-width: 0;
+}
+
+.dssast-search input[type="search"] {
+    border-color: #8799a4;
+    border-radius: 6px;
+    box-sizing: border-box;
+    margin: 0;
+    max-width: 20rem;
+    min-width: 0;
+    width: 100%;
+}
+
+.dssast-search .dssast-text-link {
+    flex: none;
+}
+
+.dssast-list-toolbar .button-primary {
+    margin-inline-start: auto;
 }
 
 .dssast-tabs {
@@ -237,6 +268,11 @@
 
 .dssast-tabs a[aria-current] {
     background: var(--dssast-tint);
+    border-color: #a8d8c8;
+    color: var(--dssast-accent);
+}
+
+.dssast-tabs a:hover {
     border-color: #a8d8c8;
     color: var(--dssast-accent);
 }
@@ -363,6 +399,20 @@
     margin: 14px 0 6px;
 }
 
+#dssast_details,
+#dssast_review {
+    border-color: #d5e0e4;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(24, 40, 61, .06);
+}
+
+#dssast_details > .postbox-header,
+#dssast_review > .postbox-header {
+    background: #f3f7fa;
+    border-color: #d5e0e4;
+    border-radius: 10px 10px 0 0;
+}
+
 .dssast-field-wide {
     grid-column: 1 / -1;
 }
@@ -411,6 +461,11 @@
 
     .dssast-sync > a {
         margin-inline-start: 0;
+    }
+
+    .dssast-search {
+        flex-basis: 100%;
+        order: 1;
     }
 }
 
