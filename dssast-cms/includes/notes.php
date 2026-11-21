@@ -3,9 +3,16 @@ defined( 'ABSPATH' ) || exit;
 function dssast_register_notes() {
  $caps = array();
  foreach ( array( 'edit_posts', 'edit_others_posts', 'publish_posts', 'read_private_posts', 'delete_posts', 'delete_private_posts', 'delete_published_posts', 'delete_others_posts', 'edit_private_posts', 'edit_published_posts', 'create_posts' ) as $cap ) { $caps[$cap] = 'manage_options'; }
- register_post_type( 'dssast_note', array( 'label' => '学习笔记', 'public' => true, 'show_in_rest' => true, 'has_archive' => true, 'rewrite' => array( 'slug' => 'notes' ), 'supports' => array( 'title', 'editor', 'author', 'revisions' ), 'capabilities' => $caps, 'map_meta_cap' => true ) );
+ register_post_type( 'dssast_note', array( 'labels' => array( 'name' => '学习笔记', 'singular_name' => '笔记', 'add_new_item' => '添加笔记', 'edit_item' => '编辑笔记' ), 'menu_icon' => 'dashicons-book-alt', 'public' => true, 'show_in_rest' => true, 'has_archive' => true, 'rewrite' => array( 'slug' => 'notes' ), 'supports' => array( 'title', 'editor', 'author', 'revisions' ), 'capabilities' => $caps, 'map_meta_cap' => true ) );
 }
 add_action( 'init', 'dssast_register_notes' );
+add_action( 'template_redirect', function () {
+    $page = get_queried_object();
+    if ( is_singular() && $page instanceof WP_Post && has_shortcode( $page->post_content, 'dssast_note_submit' ) ) {
+        nocache_headers();
+    }
+} );
+
 add_shortcode( 'dssast_note_submit', function () {
  if ( ! is_user_logged_in() ) { return '<p>请先<a href="' . esc_url( wp_login_url( get_permalink() ) ) . '">登录</a>再投稿。</p>'; }
  if ( ! current_user_can( 'read' ) ) { return '<p>当前账号不可投稿。</p>'; }
@@ -14,6 +21,7 @@ add_shortcode( 'dssast_note_submit', function () {
  if ( $id && ( ! $note || 'dssast_note' !== $note->post_type || (int) $note->post_author !== get_current_user_id() || 'draft' !== $note->post_status ) ) { return '<p>此笔记不可修改。</p>'; }
  ob_start();
  echo '<div class="dssast-note-submit"><p>提交后由管理员审核。仅可修改退回的笔记；不支持文件上传。正文支持基本 HTML。</p>';
+ if ( isset( $_GET['dssast_submitted'] ) && '1' === $_GET['dssast_submitted'] ) { echo '<p role="status">笔记已提交，等待审核。</p>'; }
  if ( $note ) { echo '<p>审核意见：' . esc_html( get_post_meta( $id, 'dssast_review_reason', true ) ) . '</p>'; }
  echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="dssast_submit_note"><input type="hidden" name="dssast_note_id" value="' . absint( $id ) . '"><input type="hidden" name="dssast_return" value="' . esc_url( get_permalink() ) . '">';
  wp_nonce_field( 'dssast_submit_note_' . $id, 'dssast_nonce' );
@@ -48,20 +56,47 @@ add_action( 'admin_post_dssast_submit_note', function () {
   if ( is_wp_error( $result ) ) { delete_option( $lock ); wp_die( '保存失败，请重试' ); }
  } finally { delete_option( $lock ); }
  $return = isset( $_POST['dssast_return'] ) && is_string( $_POST['dssast_return'] ) ? wp_unslash( $_POST['dssast_return'] ) : home_url( '/' );
- wp_safe_redirect( remove_query_arg( 'dssast_note', $return ) ); exit;
+ wp_safe_redirect( add_query_arg( 'dssast_submitted', '1', remove_query_arg( 'dssast_note', $return ) ), 303 ); exit;
 } );
 add_action( 'add_meta_boxes_dssast_note', function () {
- add_meta_box( 'dssast_review', '笔记审核', function ( $post ) {
-  wp_nonce_field( 'dssast_review_' . $post->ID, 'dssast_review_nonce' );
-  echo '<p>发布请使用编辑器的发布按钮。退回请选择下方选项并更新。</p><label><input type="checkbox" name="dssast_return_note" value="1">退回作者修改</label><p><label>审核意见<textarea class="widefat" name="dssast_review_reason">' . esc_textarea( get_post_meta( $post->ID, 'dssast_review_reason', true ) ) . '</textarea></label></p>';
- }, 'dssast_note' );
+    add_meta_box( 'dssast_review', '笔记审核', function ( $post ) {
+        wp_nonce_field( 'dssast_review_' . $post->ID, 'dssast_review_nonce' );
+        ?>
+        <p class="description">可发布笔记，或填写审核意见并退回作者修改。</p>
+        <label class="dssast-review-choice">
+            <input type="checkbox" name="dssast_return_note" value="1"> 退回作者修改
+        </label>
+        <div class="dssast-fields">
+            <div class="dssast-field dssast-field-wide">
+                <label for="dssast_review_reason">审核意见</label>
+                <textarea id="dssast_review_reason" name="dssast_review_reason" rows="4"><?php echo esc_textarea( get_post_meta( $post->ID, 'dssast_review_reason', true ) ); ?></textarea>
+            </div>
+        </div>
+        <?php
+    }, 'dssast_note' );
 } );
+
+function dssast_can_save_note_review( $id ) {
+    return $id && ! wp_is_post_revision( $id ) && current_user_can( 'manage_options' ) && current_user_can( 'edit_post', $id )
+        && ! ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
+        && isset( $_POST['dssast_review_nonce'] ) && is_string( $_POST['dssast_review_nonce'] )
+        && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['dssast_review_nonce'] ) ), 'dssast_review_' . $id );
+}
+
+add_filter( 'wp_insert_post_data', function ( $data, $postarr ) {
+    // Set draft before WordPress writes the post or fires status transition hooks.
+    if ( 'dssast_note' === $data['post_type'] && isset( $_POST['dssast_return_note'] ) && '1' === $_POST['dssast_return_note']
+        && dssast_can_save_note_review( (int) ( $postarr['ID'] ?? 0 ) ) ) {
+        $data['post_status'] = 'draft';
+        $data['post_date_gmt'] = '0000-00-00 00:00:00';
+    }
+
+    return $data;
+}, 10, 2 );
+
 add_action( 'save_post_dssast_note', 'dssast_review_note' );
 function dssast_review_note( $id ) {
- if ( ! current_user_can( 'manage_options' ) || wp_is_post_revision( $id ) || ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) ) { return; }
- if ( ! isset( $_POST['dssast_review_nonce'] ) || ! is_string( $_POST['dssast_review_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['dssast_review_nonce'] ) ), 'dssast_review_' . $id ) ) { return; }
- if ( isset( $_POST['dssast_review_reason'] ) && is_string( $_POST['dssast_review_reason'] ) ) { update_post_meta( $id, 'dssast_review_reason', sanitize_textarea_field( wp_unslash( $_POST['dssast_review_reason'] ) ) ); }
- if ( isset( $_POST['dssast_return_note'] ) && '1' === $_POST['dssast_return_note'] ) {
-  remove_action( 'save_post_dssast_note', 'dssast_review_note' ); wp_update_post( array( 'ID' => $id, 'post_status' => 'draft' ) ); add_action( 'save_post_dssast_note', 'dssast_review_note' );
- }
+    if ( dssast_can_save_note_review( $id ) && isset( $_POST['dssast_review_reason'] ) && is_string( $_POST['dssast_review_reason'] ) ) {
+        update_post_meta( $id, 'dssast_review_reason', sanitize_textarea_field( wp_unslash( $_POST['dssast_review_reason'] ) ) );
+    }
 }

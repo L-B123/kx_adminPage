@@ -1,43 +1,47 @@
-# 前台集成
+# 前台集成与上线交接
 
-入口：`dssast-cms.php` 负责生命周期；`includes/competitions.php` 负责内容模型、后台校验及最小展示。无自定义表，使用 WordPress posts/postmeta/terms。
+## 页面和接口
 
-内容类型 `dssast_competition`；分类 `dssast_competition_category`；原生字段 `post_title`、`post_content`、`post_excerpt`；封面使用 `get_the_post_thumbnail()`。公开归档 `/competitions/`，单页链接通过 `get_permalink()` 获取，不硬编码。
+在现有 WordPress 页面中添加“短代码”区块，或由主题调用 `do_shortcode()`。页面地址和导航位置由网站前台负责人确定。插件使用 WordPress 文章、元数据和分类。
 
-## 新增模块（0.2.0）
+| 用途 | 短代码 | 主题直接查询时使用 |
+| --- | --- | --- |
+| 赛事一览 | `[dssast_competitions limit="10"]` | `dssast_competition` 类型，`dssast_competition_category` 分类 |
+| 笔记列表 | `[dssast_notes]` | `dssast_note` 类型 |
+| 笔记投稿 | `[dssast_note_submit]` | 在页面内容中渲染，使用 WordPress 登录 |
+| 新闻 | `[dssast_news]` | 原生 `post` 类型，`dssast-news` 分类 |
+| 公告 | `[dssast_news category="dssast-announcement"]` | 原生 `post` 类型，`dssast-announcement` 分类 |
 
-`includes/notes.php` 负责笔记和审核；`includes/xiumi.php` 负责导入安全处理、回调和绑定管理。插件入口负责新闻分类初始化。
+公开列表使用 `post_status=publish`、`has_password=false`。使用 `get_permalink()` 和 `get_post_type_archive_link()` 获取地址。赛事、笔记的归档默认使用 `competitions` 和 `notes` 路径。短代码的 `limit` 限制为 1–50。新闻和公告的“添加”入口预选对应分类，编辑可在发布前调整。秀米新稿默认归为新闻草稿，后续同步保留编辑手动选定的分类。
 
-笔记类型为 `dssast_note`，作者是原生 post_author；审核状态使用 pending（待审核）、draft（退回/草稿）、publish（公开）。公开列表务必查询 publish，并排除密码保护内容；不要向访客返回 pending/draft。`dssast_review_reason` 是审核意见，仅在作者自己的投稿页面及管理后台显示，不应出现在公共 API。投稿 Shortcode 为 `[dssast_note_submit]`，不支持附件上传和动态区块。正文中的短代码按文字处理。
+投稿页面显示当前用户的投稿和退回意见。将该页面及其查询参数变体从 WordPress 整页缓存、反向代理和 CDN 缓存中排除。公开页面和接口只使用公开字段。审核意见 `dssast_review_reason` 仅供管理后台和稿件作者查看。秀米同步的来源和去重元数据由插件维护。
 
-新闻和公告查询原生 post，通过 category_name 分别使用 `dssast-news` 或 `dssast-announcement`。秀米也导入原生 post 草稿，管理员审核时选择分类；不会自动发布。`dssast_xiumi_article_id` 为来源 ID；`dssast_xiumi_key`、`dssast_xiumi_hash` 为内部去重字段，前台无需使用。业务系统不要改写内部去重元数据。
-
-笔记类型开启原生 REST 供管理员 Gutenberg 使用；投稿使用 admin-post.php 的专用动作，非管理员没有原生笔记写入权限。页面不得整页缓存。自定义动态区块可以后续调用相同 WP_Query 与字段协议，不应另建一套数据模型。
+### 赛事字段
 
 | Meta key | 格式 |
 | --- | --- |
-| dssast_status | planned/open/closed/completed/cancelled；空值表示未设置 |
-| dssast_date | YYYY-MM-DD |
-| dssast_registration_start | YYYY-MM-DDTHH:mm，站点本地时间 |
-| dssast_registration_end | 同上 |
-| dssast_registration_url | HTTP(S) URL |
+| `dssast_status` | `planned`、`open`、`closed`、`completed`、`cancelled` |
+| `dssast_date` | `YYYY-MM-DD` |
+| `dssast_registration_start` | `YYYY-MM-DDTHH:mm`，站点时区 |
+| `dssast_registration_end` | `YYYY-MM-DDTHH:mm`，站点时区 |
+| `dssast_registration_url` | HTTP(S) URL |
 
-字段缺失返回空字符串。所有自定义字段、函数、分类和 Shortcode 均使用 dssast 前缀，核心字段保持原名。
+通过 `get_post_meta( $id, $key, true )` 读取。缺失字段为空。可信服务器代码写入前可调用 `dssast_validate_fields()`，传入五个键并检查返回值。赛事和笔记提供原生内容 REST 接口，赛事业务 meta 未注册为 REST 字段。赛事筛选可用 `tax_query` 和 `meta_query`，前台输出按文本、属性或 URL 分别转义。报名表由赛事负责人提供，插件维护跳转地址。
 
-```php
-$events = new WP_Query( array(
-    'post_type' => 'dssast_competition',
-    'post_status' => 'publish',
-    'has_password' => false,
-    'posts_per_page' => 10,
-    'no_found_rows' => true,
-) );
-foreach ( $events->posts as $event ) {
-    echo '<h2>' . esc_html( get_the_title( $event ) ) . '</h2>';
-    echo '<p>' . esc_html( get_post_meta( $event->ID, 'dssast_date', true ) ) . '</p>';
-}
-```
+## 对接人员和确认事项
 
-分类筛选使用 `tax_query`；状态筛选使用 `meta_query`，key 为 `dssast_status`。展示字符串使用 `esc_html`，属性使用 `esc_attr`，URL 使用 `esc_url`；不要直接输出元数据。不要把用户请求直接拼入查询或 SQL。
+| 联系谁 | 需要确认和联验的内容 |
+| --- | --- |
+| 官网 WordPress 管理员与运维 | 测试站与正式站入口、插件安装或更新权限、WordPress/PHP 版本、站点时区、备份和回滚方式。测试站验证插件菜单、媒体和固定链接。 |
+| 官网前台／主题负责人 | 五个短代码分别放在哪些页面，首页和导航怎么链接，主题内的样式，以及手机端访问。和运维一起确认投稿页绕过所有缓存。 |
+| 赛事负责人和报名表维护人 | 赛事分类、测试赛事的日期和开放时段，正式报名链接与可访问权限，谁负责及时更新赛事状态。 |
+| 学习笔记审核负责人和一名学生测试员 | 审核人、退回意见和发布约定。用学生账号投稿，管理员退回，学生重提，管理员发布，再从访客视角检查可见性。 |
+| 宣传／新闻负责人和秀米应用管理员 | 新闻与公告归类、已有文章的栏目映射、发布权限、秀米应用及绑定账号。运维通过既有安全渠道配置 App ID 和密钥，联验 HTTPS 的 HTML、图片、通知三个回调、草稿归类以及重复同步。 |
+| GitHub 仓库管理员 | 确认 `fallingstar56` 对 `L-B123/kx_adminPage` 的写入权限，以及 `main` 是否接受直接推送或要求走 PR。 |
 
-`[dssast_competitions limit="5"]` 显示最新发布赛事，数量限制 1–50，排除密码保护内容，类名 `.dssast-competitions`。不提供主题 CSS。内容类型和分类开启原生 REST 供区块编辑器使用，业务 meta 不通过 REST 暴露或写入；未来扩展需统一权限和验证。可信服务器代码写入应先调用 `dssast_validate_fields()`，传入全部五个键，返回 false 时停止写入；直接调用底层 meta API 不构成本插件的受支持写入接口。
+## 上线验收
+
+1. 在测试站安装发布包，按[本地验收](TESTING.md)走完核心流程。正式站发布前备份数据库和当前插件目录。
+2. 在[正式站 WordPress 后台](https://dssast.cn/wp-admin/index.php)上传发布包。如插件已存在，确认替换的是 `dssast-cms`。
+3. 用现有内容检查三个侧栏项、赛事单页、新闻和公告列表。再用普通账号验证投稿和缓存隔离，用管理员账号验证退回与发布。
+4. 秀米启用时，使用测试稿走完整个同步链路并清理测试数据。发生异常时，用备份的插件包恢复上一版本，检查菜单与页面访问。

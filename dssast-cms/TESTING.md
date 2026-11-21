@@ -1,6 +1,21 @@
 # 本地验收
 
-## 当前记录
+## 0.4.0 验收记录
+
+这次更新补充了真实 WordPress 集成断言，覆盖后台入口、新闻公告预选分类、笔记退回时的状态事件、公开列表、赛事字段保存和秀米草稿分类。当前终端没有 Linux PHP，无法启动现有的 Windows PHP 或本机浏览器，0.4.0 的 WordPress 运行和浏览器验收待执行。
+
+用现有 Windows 脚本把当前源码同步到本地 WordPress 后，在仓库根目录执行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\local-dev\setup-local.ps1
+Push-Location .\.local-test\php
+try { .\php.exe -c php.ini ..\..\dssast-cms\tests\integration.php ..\wordpress\wp-load.php }
+finally { Pop-Location }
+```
+
+另用桌面和手机尺寸检查内容管理首页、列表分页、状态标签，以及赛事表单和笔记审核区。新闻、公告分别从管理页进入新建，检查预选栏目。投稿后应显示等待审核的反馈。上线前按[前台集成与上线交接](FRONTEND-INTEGRATION.md)确认生产环境与秀米回调。
+
+## 历史记录（0.3.0 之前）
 
 2026-11-18 第二轮：通过官方 PHP 运行时（下载后 SHA256 校验）和官方 WordPress 下载包搭建临时本地测试环境。实际 WordPress 7.1.4、PHP 8.3.36、SQLite Database Integration 适配，启用 GD。插件运行时不依赖 SQLite 适配。
 
@@ -20,12 +35,12 @@
 php tests/integration.php /absolute/path/to/wordpress/wp-load.php
 ```
 
-测试会修改测试管理员的秀米绑定数据、写入测试通知记录并创建/清理测试文章及用户，因此只能用于隔离测试库。临时 HTTP 测试脚本位于工作区 `.local-test/http-test.py`、`.local-test/note-http.py`，依赖同目录自动生成的测试配置，不打入发布包；测试目录已加入 .gitignore。
+测试会修改测试管理员的秀米绑定数据、写入测试通知记录并创建/清理测试文章及用户，因此只能用于隔离测试库。历史 HTTP 测试曾使用独立脚本和临时配置。复测请在隔离站点按下文步骤操作。
 
 ## 后续模块手工验收
 
 1. 两个普通账号分别投稿，互相伪造 note ID，必须拒绝读取/修改对方草稿；伪造 publish/post_author 参数不影响服务器固定值。
-2. 管理员退回并填写原因，作者修改再提交，管理员发布；确认前台只能查询公开笔记。测试 Gutenberg 中审核 meta box 保存及提示。
+2. 管理员退回并填写原因，作者修改再提交，管理员发布；确认前台只能查询公开笔记。检查经典编辑器中审核区保存和提示。
 3. 秀米配置错误密钥、错误 open_id、未知 partner、错误 app_id、超大 JSON/文件、无效图像，均应拒绝；确认错误记录不含密钥和原始正文。
 4. 同一文章重复导入不新增，草稿变更可更新；发布后变更拒绝；重复图片返回同 URL；多篇批次失败后重试不产生重复。
 5. bind/unbind/secret_reset/err_html/err_image 通知分别验证；解除绑定后上传拒绝，重置密钥后旧密钥拒绝，新密钥需重新配置。
@@ -44,10 +59,10 @@ php -l includes/competitions.php
 
 ## 功能及回归
 
-1. 启用无报错；菜单出现赛事；Gutenberg 可编辑正文、特色图片及分类。
+1. 启用无报错，出现内容管理、赛事和学习笔记。赛事经典编辑器可编辑正文、特色图片及分类。
 2. 填写五个业务字段，发布并刷新编辑页，值一致。清空字段并更新，确认数据库 meta 被删除、前台不显示空字段。
 3. Shortcode 显示标题、封面、摘要、状态、日期和报名时间及链接；空库显示“暂无赛事”。草稿、私密、密码保护赛事不出现在列表；limit=0/100 被限制为 1/50。
-4. 关闭并重新打开编辑器、保存草稿、更新已发布赛事，确认业务字段稳定。测试 Gutenberg 的传统 meta box 保存流程与错误通知。
+4. 关闭并重新打开编辑器、保存草稿、更新已发布赛事，确认业务字段稳定。检查经典编辑器的赛事信息保存和错误通知。
 5. 停用后内容保留，重新启用恢复；确认固定链接可访问。原有文章、页面及主题不受影响。
 
 ## 安全及失败路径

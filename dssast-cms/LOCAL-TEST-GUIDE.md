@@ -1,5 +1,35 @@
 # 本地网站启动、登录与测试指导
 
+## 当前仓库：Windows 一键安装入口（2026-11-18）
+
+当前仓库位置为 `D:\大二秋季学期\科协技术部\kx_adminPage`。新增的 `local-dev` 脚本以自身位置定位仓库，不依赖下文旧工作区路径。请在 **Windows PowerShell** 中运行，而不是 WSL 终端：
+
+```powershell
+Set-Location 'D:\大二秋季学期\科协技术部\kx_adminPage'
+powershell -NoProfile -ExecutionPolicy Bypass -File .\local-dev\setup-local.ps1
+```
+
+脚本会从官方来源下载 PHP 8.3 x64（核对官方 SHA256）、WordPress 和 SQLite Database Integration，启用 PHP 必需扩展及本仓库插件，初始化数据库、随机密码的管理员/订阅者账号，以及首页、赛事一览、笔记投稿、公开笔记、新闻和公告页面，然后后台启动服务并检查登录页和栏目页面。这里只准备本机访问，不配置公网或秀米密钥。
+
+- 默认首页：<http://127.0.0.1:8097/>；后台：<http://127.0.0.1:8097/wp-admin/>。
+- 账号密码和页面地址：仓库中的 `.local-test/LOCAL-LOGIN.txt`；此目录已被 Git 忽略。
+- 数据库：`.local-test/database/.ht.sqlite`，位于网站根目录之外。媒体在 `.local-test/wordpress/wp-content/uploads/`，备份时保留二者。
+- 运行日志：`.local-test/server-error.log`。
+- 脚本仅在首次创建时生成密码；重跑会更新插件副本、补建缺失页面，不重置密码或删除内容。后台自行改密后，凭据文件不会自动更新。
+- 首次安装需要联网。若 PHP 提示缺少 `VCRUNTIME` 等运行库，请安装 [Microsoft Visual C++ x64 运行库](https://aka.ms/vs/17/release/vc_redist.x64.exe) 后重试。
+- 若首次安装时 8097 已被占用，可使用 `setup-local.ps1 -Port 8098`；已写入 `.local-test/site.json` 的端口不能通过重跑脚本直接更换。
+
+日后启动、停止（停止保留数据库）：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\local-dev\start-local.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\local-dev\stop-local.ps1
+```
+
+源码更新后重新执行 `setup-local.ps1`，将当前插件同步到网站副本。无需执行下文旧环境中的密码重置脚本。
+
+**本次状态：脚本已编写并完成静态检查，但当前代理终端无法联网或执行 Windows 程序，尚未实际下载安装、启动或通过 HTTP 验收。首次执行成功后，以脚本输出的健康检查结果为准。** 下文保留为旧电脑测试记录，其中 `D:\CodeX\kxkms` 路径、`.local-test` 内的旧脚本及既有测试结果不适用于当前新部署。
+
 适用：当前电脑 `D:\CodeX\kxkms` 工作区、DSSAST CMS 0.3.0。本文根据实际启动脚本和账号准备脚本编写，不包含密码。
 
 ## 1. 本地环境在哪里

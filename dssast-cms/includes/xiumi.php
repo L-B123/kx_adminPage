@@ -49,17 +49,36 @@ function dssast_xiumi_html( $request ) {
    $key = hash( 'sha256', dssast_xiumi_config( 'APP_ID' ) . ':' . $uid . ':' . $a['article_id'] );
    $fingerprint = hash( 'sha256', wp_json_encode( $a ) );
    $old = get_posts( array( 'post_type' => 'post', 'post_status' => array( 'draft', 'pending', 'publish', 'private', 'future', 'trash' ), 'meta_key' => 'dssast_xiumi_key', 'meta_value' => $key, 'numberposts' => 1 ) );
-   if ( $old && get_post_meta( $old[0]->ID, 'dssast_xiumi_hash', true ) === $fingerprint ) { continue; }
-   if ( $old && 'draft' !== $old[0]->post_status ) { return dssast_xiumi_fail( 'dssast_existing_not_draft', 409 ); }
-   // Strip shortcode brackets: imported HTML must never execute installed shortcodes.
-   $content = dssast_safe_import_html( $a['description'] );
-   $id = wp_insert_post( wp_slash( array( 'ID' => $old ? $old[0]->ID : 0, 'post_type' => 'post', 'post_status' => 'draft', 'post_author' => $uid, 'post_title' => sanitize_text_field( $a['title'] ), 'post_content' => $content, 'post_excerpt' => sanitize_textarea_field( $a['summary'] ?? '' ), 'meta_input' => array( 'dssast_xiumi_key' => $key, 'dssast_xiumi_hash' => $fingerprint, 'dssast_xiumi_article_id' => (string) $a['article_id'] ) ) ), true );
+   $existing = $old ? $old[0] : null;
+   $previous_hash = $existing ? get_post_meta( $existing->ID, 'dssast_xiumi_hash', true ) : '';
+   if ( $previous_hash === $fingerprint ) { continue; }
+   if ( $existing && 'draft' !== $existing->post_status ) { return dssast_xiumi_fail( 'dssast_existing_not_draft', 409 ); }
+
+   // A missing fingerprint marks a new or incomplete import. Later edits retain editorial categories.
+   $post = array(
+    'ID' => $existing ? $existing->ID : 0,
+    'post_type' => 'post',
+    'post_status' => 'draft',
+    'post_author' => $uid,
+    'post_title' => sanitize_text_field( $a['title'] ),
+    'post_content' => dssast_safe_import_html( $a['description'] ),
+    'post_excerpt' => sanitize_textarea_field( $a['summary'] ?? '' ),
+    'meta_input' => array( 'dssast_xiumi_key' => $key, 'dssast_xiumi_article_id' => (string) $a['article_id'] ),
+   );
+   if ( '' === $previous_hash ) {
+    dssast_ensure_categories();
+    $news = get_term_by( 'slug', 'dssast-news', 'category' );
+    if ( ! $news ) { return dssast_xiumi_fail( 'dssast_news_category', 500 ); }
+    $post['post_category'] = array( (int) $news->term_id );
+   }
+
+   $id = wp_insert_post( wp_slash( $post ), true );
    if ( is_wp_error( $id ) ) { return dssast_xiumi_fail( 'dssast_insert', 500 ); }
-   dssast_ensure_categories();
-   $news = get_term_by( 'slug', 'dssast-news', 'category' );
-   if ( ! $news || is_wp_error( wp_set_post_categories( $id, array( (int) $news->term_id ), true ) ) ) { return dssast_xiumi_fail( 'dssast_news_category', 500 ); }
+   if ( isset( $post['post_category'] ) && ! has_category( $post['post_category'], $id ) ) { return dssast_xiumi_fail( 'dssast_news_category', 500 ); }
+
    $cover = attachment_url_to_postid( esc_url_raw( $a['picurl'] ?? '' ) );
    if ( $cover && (int) get_post_field( 'post_author', $cover ) === $uid && wp_attachment_is_image( $cover ) ) { set_post_thumbnail( $id, $cover ); }
+   if ( ! update_post_meta( $id, 'dssast_xiumi_hash', $fingerprint ) ) { return dssast_xiumi_fail( 'dssast_import_fingerprint', 500 ); }
   }
  } finally { delete_option( $lock ); }
  return array( 'code' => 0 );

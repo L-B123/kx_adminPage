@@ -20,21 +20,32 @@ function dssast_register_competitions() {
 add_action( 'init', 'dssast_register_competitions' );
 add_action( 'add_meta_boxes_dssast_competition', function () { add_meta_box( 'dssast_details', '赛事信息', 'dssast_details_box', 'dssast_competition' ); } );
 function dssast_details_box( $post ) {
- wp_nonce_field( 'dssast_save_' . $post->ID, 'dssast_nonce' );
- echo '<p>时间采用站点时区：' . esc_html( wp_timezone_string() ) . '。状态手动维护；字段均可留空。</p>';
- foreach ( dssast_fields() as $field => $label ) {
-  $key = 'dssast_' . $field; $value = get_post_meta( $post->ID, $key, true );
-  echo '<p><label for="' . esc_attr( $key ) . '">' . esc_html( $label ) . '</label><br>';
-  if ( 'status' === $field ) {
-   echo '<select id="dssast_status" name="dssast_status"><option value="">未设置</option>';
-   foreach ( dssast_statuses() as $code => $name ) { echo '<option value="' . esc_attr( $code ) . '" ' . selected( $value, $code, false ) . '>' . esc_html( $name ) . '</option>'; }
-   echo '</select>';
-  } else {
-   $type = 'date' === $field ? 'date' : ( 'registration_url' === $field ? 'url' : 'datetime-local' );
-   echo '<input class="widefat" type="' . esc_attr( $type ) . '" id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" value="' . esc_attr( $value ) . '">';
-  }
-  echo '</p>';
- }
+    wp_nonce_field( 'dssast_save_' . $post->ID, 'dssast_nonce' );
+    $types = array( 'date' => 'date', 'registration_start' => 'datetime-local', 'registration_end' => 'datetime-local', 'registration_url' => 'url' );
+    ?>
+    <p class="description">时间采用站点时区 <?php echo esc_html( wp_timezone_string() ); ?>。所有字段均可留空，赛事状态由管理员更新。</p>
+    <div class="dssast-fields">
+        <?php foreach ( dssast_fields() as $field => $label ) :
+            $key = 'dssast_' . $field;
+            $stored = get_post_meta( $post->ID, $key, true );
+            $value = is_string( $stored ) ? $stored : '';
+            ?>
+            <div class="dssast-field<?php echo 'registration_url' === $field ? ' dssast-field-wide' : ''; ?>">
+                <label for="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label>
+                <?php if ( 'status' === $field ) : ?>
+                    <select id="dssast_status" name="dssast_status">
+                        <option value="">未设置</option>
+                        <?php foreach ( dssast_statuses() as $code => $name ) : ?>
+                            <option value="<?php echo esc_attr( $code ); ?>" <?php selected( $value, $code ); ?>><?php echo esc_html( $name ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                <?php else : ?>
+                    <input type="<?php echo esc_attr( $types[$field] ); ?>" id="<?php echo esc_attr( $key ); ?>" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>">
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <?php
 }
 function dssast_validate_fields( $input ) {
  $clean = array();
