@@ -38,6 +38,15 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         $screen && in_array( $screen->post_type, array( 'dssast_competition', 'dssast_note' ), true ) ) {
         dssast_enqueue_admin_style();
     }
+    if ( 'edit.php' === $hook && $screen && 'dssast_competition' === $screen->post_type ) {
+        wp_enqueue_script(
+            'dssast-competition-quick-edit',
+            plugins_url( 'assets/competition-quick-edit.js', DSSAST_CMS_FILE ),
+            array( 'inline-edit-post' ),
+            DSSAST_CMS_VERSION,
+            true
+        );
+    }
 } );
 
 function dssast_management_views() {
@@ -303,3 +312,34 @@ add_action( 'manage_dssast_competition_posts_custom_column', function ( $column,
         echo esc_html( is_string( $date ) && '' !== $date ? $date : '—' );
     }
 }, 10, 2 );
+
+add_action( 'quick_edit_custom_box', function ( $column, $post_type ) {
+    if ( 'dssast_status' !== $column || 'dssast_competition' !== $post_type || ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+    ?>
+    <fieldset class="dssast-competition-quick-edit" disabled hidden>
+        <legend class="inline-edit-legend">赛事信息</legend>
+        <p class="description">时间采用站点时区 <?php echo esc_html( wp_timezone_string() ); ?>。</p>
+        <input type="hidden" name="dssast_nonce">
+        <div class="dssast-fields">
+            <?php foreach ( dssast_fields() as $field => $label ) : ?>
+                <label class="dssast-field<?php echo 'registration_url' === $field ? ' dssast-field-wide' : ''; ?>">
+                    <span><?php echo esc_html( $label ); ?></span>
+                    <?php dssast_competition_field_control( $field, '' ); ?>
+                </label>
+            <?php endforeach; ?>
+        </div>
+    </fieldset>
+    <?php
+}, 10, 2 );
+
+add_action( 'add_inline_data', function ( $post ) {
+    if ( 'dssast_competition' !== $post->post_type || ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+    $values = dssast_competition_values( $post->ID );
+    $values['dssast_nonce'] = wp_create_nonce( 'dssast_save_' . $post->ID );
+    $json = wp_json_encode( $values, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
+    echo '<div class="dssast-quick-edit-data" data-fields="' . esc_attr( $json ) . '"></div>';
+} );

@@ -113,6 +113,19 @@ $_POST['dssast_date'] = '2026-11-19';
 wp_update_post(array('ID' => $event, 'post_title' => $event_title));
 verify(get_post_meta($event, 'dssast_date', true) === '2026-11-18', 'invalid registration range leaves previous competition fields intact');
 delete_transient('dssast_error_' . get_current_user_id());
+
+ob_start();
+do_action('quick_edit_custom_box', 'dssast_status', 'dssast_competition');
+$competition_quick_edit = ob_get_clean();
+foreach (array_keys($fields) as $name) {
+    verify(strpos($competition_quick_edit, 'name="' . $name . '"') !== false, 'competition Quick Edit includes ' . $name);
+}
+update_post_meta($event, 'dssast_registration_start', '2026-11-18T18:00');
+$_POST = array('dssast_registration_end' => '2026-11-18T17:00');
+verify(dssast_competition_submitted_fields($event, true) === false, 'Quick Edit validates against the saved start time');
+$_POST['dssast_registration_end'] = '2026-11-18T19:00';
+verify(dssast_competition_submitted_fields($event, true) === $_POST, 'Quick Edit writes only the submitted competition fields');
+
 $_POST = array();
 wp_delete_post($event, true);
 $notify->set_body(wp_json_encode(array('type'=>'secret_reset','app_id'=>'local-test-app')));

@@ -417,7 +417,8 @@
     grid-column: 1 / -1;
 }
 
-.dssast-field > label {
+.dssast-field > label,
+.dssast-competition-quick-edit .dssast-field > span {
     color: #18283d;
     display: block;
     font-weight: 600;
