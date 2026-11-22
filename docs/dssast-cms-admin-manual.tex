@@ -1,0 +1,249 @@
+% !TeX program = xelatex
+\documentclass[UTF8,a4paper,zihao=-4,fontset=fandol]{ctexart}
+
+\usepackage[left=28mm,right=26mm,top=27mm,bottom=25mm,headheight=16pt]{geometry}
+\usepackage{setspace}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{xurl}
+\usepackage[hidelinks,bookmarksnumbered]{hyperref}
+
+\newcommand{\cmsversion}{0.4.2}
+\newcommand{\menu}[2]{\textbf{#1}\,\ensuremath{\rightarrow}\,\textbf{#2}}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newenvironment{manualtable}[1]
+  {\par\medskip\noindent\begin{minipage}{\linewidth}\small\captionof{table}{#1}\centering}
+  {\end{minipage}\par\medskip}
+
+\setstretch{1.42}
+\setlength{\parindent}{2\ccwd}
+\setlength{\parskip}{0pt}
+\setlength{\emergencystretch}{2em}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.24}
+\setlist[enumerate]{label=\arabic*.,leftmargin=2.7em,topsep=3pt,itemsep=2pt,parsep=0pt}
+\setlist[itemize]{leftmargin=2.7em,topsep=3pt,itemsep=2pt,parsep=0pt}
+\captionsetup{font=small,labelfont=bf,labelsep=quad,skip=5pt,hypcap=false}
+\ctexset{
+  section={format=\zihao{3}\heiti\raggedright,beforeskip=1.4ex plus .3ex,afterskip=.8ex},
+  subsection={format=\zihao{4}\heiti\raggedright,beforeskip=1.1ex plus .3ex,afterskip=.5ex},
+}
+\setcounter{tocdepth}{1}
+\renewcommand{\contentsname}{目\quad 录}
+\hypersetup{
+  pdftitle={DSSAST CMS 管理员操作手册},
+  pdfsubject={赛事、学习笔记、新闻公告与秀米同步的 WordPress 操作指南},
+  pdfdisplaydoctitle=true
+}
+
+\fancypagestyle{manual}{
+  \fancyhf{}
+  \fancyhead[L]{\zihao{-5} DSSAST CMS 管理员操作手册}
+  \fancyhead[R]{\zihao{-5} 版本 \cmsversion}
+  \fancyfoot[C]{\zihao{-5}\thepage}
+  \renewcommand{\headrulewidth}{0.4pt}
+}
+
+\begin{document}
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+  \centering
+  \vspace*{29mm}
+  {\zihao{3}\heiti 笃实书院学生科协\par}
+  \vspace{21mm}
+  {\zihao{1}\bfseries DSSAST CMS\par}
+  \vspace{5mm}
+  {\zihao{1}\heiti 管理员操作手册\par}
+  \vspace{20mm}
+  {\zihao{4}适用版本\quad DSSAST CMS \cmsversion\par}
+  \vspace{5mm}
+  {\zihao{4}适用对象\quad 网站管理员与内容审核人员\par}
+  \vfill
+  {\zihao{4}二〇二六年十一月\par}
+  \vspace{16mm}
+\end{titlepage}
+
+\pagenumbering{Roman}
+\hypersetup{pageanchor=true}
+\pagestyle{plain}
+\pdfbookmark[1]{目录}{front-matter}
+\begingroup
+\ctexset{section={format=\centering\zihao{3}\heiti}}
+\tableofcontents
+\endgroup
+
+\clearpage
+\pagenumbering{arabic}
+\pagestyle{manual}
+
+\section{登录与工作台}
+
+\subsection{登录管理后台}
+在浏览器中打开 \url{https://dssast.cn/wp-login.php}，使用分配给自己的 WordPress 管理员账号登录。登录后进入 \textbf{内容管理}，可查看待审核笔记数和已发布赛事数，并进入各业务栏目。WordPress 界面语言不同或版本更新时，按钮文字以实际后台为准。
+
+\begin{manualtable}{常用后台入口}
+  \begin{tabularx}{\linewidth}{@{}p{38mm}Y@{}}
+    \toprule
+    \textbf{入口} & \textbf{用途} \\
+    \midrule
+    内容管理 & 查看待审笔记、已发布赛事与各栏目快捷入口。 \\
+    赛事 & 添加及编辑赛事，管理赛事分类和报名信息。 \\
+    学习笔记 & 编辑笔记。集中审核请进入\menu{内容管理}{待审核笔记}。 \\
+    新闻管理、公告管理 & 在内容管理下查找、编辑和添加对应分类的文章。 \\
+    媒体 & 查看赛事封面、新闻图片和秀米同步的媒体文件。 \\
+    \menu{工具}{秀米同步} & 查阅回调地址、绑定秀米账号及查看最近错误。 \\
+    \bottomrule
+  \end{tabularx}
+\end{manualtable}
+
+\subsection{账号与日常检查}
+赛事管理、笔记审核与秀米绑定使用管理员账号。新闻和公告是 WordPress 原生文章，编辑及发布权限依账号角色分配。投稿学生使用能登录网站的普通账号。测试时用不同的浏览器会话分别模拟管理员、学生与访客。
+
+首次接手时，在\menu{插件}{已安装插件}确认 DSSAST CMS 已启用，在\menu{设置}{常规}确认站点时区。正式站采用 \code{Asia/Shanghai}。赛事报名起止时间按站点时区填写。
+
+\section{赛事信息管理}
+
+\subsection{新建与发布}
+\begin{enumerate}
+  \item 进入 \textbf{赛事}，点击 \textbf{添加赛事}。在标题和正文中填写赛事名称、介绍、赛制、对象与参赛要求。
+  \item 根据需要选择赛事分类、设置特色图片并填写摘要。赛事列表可读取摘要与封面。
+  \item 在编辑页的 \textbf{赛事信息} 面板填写赛事进度、日期和报名资料，参见表~\ref{tab:competition-fields}。
+  \item 保存草稿后重新打开，检查字段和正文。确认后点击 \textbf{发布}。
+  \item 以访客身份打开\href{https://dssast.cn/events/}{赛事栏目}（\code{/events/}），检查赛事详情、报名时间和链接。用普通账号确认报名表的访问权限。
+\end{enumerate}
+
+\begin{manualtable}{赛事信息字段}\label{tab:competition-fields}
+  \begin{tabularx}{\linewidth}{@{}p{26mm}Y@{}}
+    \toprule
+    \textbf{字段} & \textbf{填写要求} \\
+    \midrule
+    赛事状态 & 筹备中、报名中、报名结束、已结束、已取消，可选未设置。 \\
+    赛事日期 & 填写一个日期，例如 2026 年 12 月 20 日。 \\
+    报名开始 & 填写日期和时间，例如 2026 年 12 月 1 日 09:00。 \\
+    报名截止 & 填写日期和时间，且不得早于报名开始。 \\
+    报名链接 & 填写报名表的完整 HTTP 或 HTTPS 地址。 \\
+    \bottomrule
+  \end{tabularx}
+\end{manualtable}
+
+\subsection{维护进度和报名信息}
+WordPress 的发布状态决定赛事是否公开。赛事状态表示业务进度，由管理员随报名和比赛安排手动更新。切换到“报名中”后，还应确认报名表实际开放。
+
+所有赛事业务字段均可留空。清空字段并更新可删除原值。如果出现“赛事业务字段未保存”，整组业务字段会保留原值，此时标题或正文可能已保存。修正日期、时间顺序或链接后再次保存，重新打开编辑页逐项确认。业务字段需主动保存。
+
+\section{学习笔记投稿与审核}
+
+\subsection{学生投稿}
+\begin{enumerate}
+  \item 打开笔记投稿页 \url{https://dssast.cn/note-submit/}，按提示登录普通账号并返回投稿页。
+  \item 填写标题和正文，点击 \textbf{提交审核}。标题输入框最多 200 个字符。正文支持基本 HTML，投稿表单暂不提供附件上传。
+  \item 在 \textbf{我的投稿（最近 30 条）} 中确认稿件为待审核。新投稿每分钟最多一篇，收到频率提示时等待后再提交。
+\end{enumerate}
+
+\subsection{审核并发布}
+\begin{enumerate}
+  \item 进入\menu{内容管理}{待审核笔记}，按标题或正文搜索稿件，点击 \textbf{审核}。
+  \item 核对作者、正文、资料来源和外部链接。必要时编辑标题或正文。
+  \item 稿件通过时，确认“退回作者修改”处于未选状态，点击 \textbf{发布}。
+  \item 到 \textbf{全部笔记} 核对记录的发布状态，并在\href{https://dssast.cn/notes/}{学习笔记栏目}或该稿件的查看链接检查公开内容。
+\end{enumerate}
+
+\par
+\ifdim\dimexpr\pagegoal-\pagetotal\relax<8\baselineskip\newpage\fi
+\subsection{退回、重投和再次审核}
+\begin{enumerate}
+  \item 在笔记的 \textbf{笔记审核} 面板填写可执行的修改意见，例如“请补充实验步骤及资料来源”。
+  \item 勾选 \textbf{退回作者修改}，使用编辑页的保存按钮提交。回到全部笔记，确认该稿件已转为草稿。
+  \item 作者在投稿页的 \textbf{我的投稿} 中找到该稿，点击 \textbf{修改再提交}，阅读表单上方的审核意见，修改后重新提交。
+  \item 管理员在待审核队列复核。再次发布时保持退回选项未勾选。
+\end{enumerate}
+
+审核意见供管理员和稿件作者查看。作者可编辑本人已退回的草稿。请审核人员和作者主动检查队列及投稿状态。已发布笔记退回后将取消公开，操作前确认是否需要撤下。
+
+\section{新闻公告管理}
+
+\subsection{新建和发布}
+\begin{enumerate}
+  \item 进入\menu{内容管理}{新闻管理}或\menu{内容管理}{公告管理}。
+  \item 点击 \textbf{添加新闻} 或 \textbf{添加公告}。页面会为原生文章预选对应分类，发布前请再次核对。
+  \item 填写标题、正文，按需要设置特色图片和摘要。先预览，再发布或定时发布。
+  \item 在对应管理列表核对文章状态，从\href{https://dssast.cn/news/}{新闻栏目}或\href{https://dssast.cn/announcements/}{公告栏目}查看发布结果。
+\end{enumerate}
+
+\subsection{分类与已有稿件}
+正式站的新闻和公告分别采用 \code{news} 和 \code{announcements} 分类别名。它们用于栏目查询和归档地址。编辑已有文章时，从对应管理页搜索标题并打开编辑页，确认分类、可见性和发布时间后更新。
+
+\section{秀米稿件同步}
+
+\subsection{配置与绑定}
+使用秀米自建网站应用向 WordPress 推送图文。技术维护人员负责在服务器配置应用 ID 和密钥，确认 HTTPS 回调可用，并为图片处理提供 GD 或 Imagick。凭据通过授权渠道交接。
+
+\begin{enumerate}
+  \item 打开\menu{工具}{秀米同步}，取得后台显示的三条回调地址。将图文、图片和通知地址分别填写到秀米应用的对应位置。
+  \item 点击 \textbf{绑定当前管理员的秀米账号}，在秀米完成授权。站点收到绑定通知后，可以用该绑定账号同步。
+  \item 首次联调选用一篇测试图文。在 \textbf{新闻管理} 查找导入草稿，并在 \textbf{媒体} 检查图片。
+\end{enumerate}
+
+\begin{manualtable}{秀米回调与用途}
+  \begin{tabularx}{\linewidth}{@{}p{48mm}Y@{}}
+    \toprule
+    \textbf{后台所示回调末段} & \textbf{用途} \\
+    \midrule
+    \code{/xiumi/html} & 接收图文并写入新闻草稿。 \\
+    \code{/xiumi/image} & 接收图片并存入 WordPress 媒体库。 \\
+    \code{/xiumi/notify} & 接收绑定、解绑、密钥重置及同步错误通知。 \\
+    \bottomrule
+  \end{tabularx}
+\end{manualtable}
+
+\subsection{同步、校对和发布}
+在秀米选中准备同步的公众号稿件，发送到已绑定的网站。同步生成新闻草稿。管理员打开草稿，核对标题、正文、图片、封面、链接和分类，预览后手动发布。图片存入媒体库后具有公开地址，上传前应确认授权范围。
+
+同一稿件原样重试会跳过重复写入。源文有更新时，同步可以覆盖仍处于草稿状态的正文，并保留手动调整的分类。稿件已发布或已处于其他状态时，变化的源文会被拒绝覆盖。编辑人员应在同步完毕后进行站内校对。
+
+图片支持 JPEG、PNG、GIF 和 WebP。单张大小上限为 5 MiB，像素总数上限为 2000 万。同步后的图片经过重新编码，复杂排版与动画应在预览时复查。
+
+\subsection{日志与验收状态}
+在 \textbf{秀米同步} 页面查看最近错误，时间戳按 UTC 记录。正式站已通过模拟稿件导入及重复同步验收，真实秀米应用需完成配置和账号绑定后再做公网回调联调。具体配置见\href{https://github.com/L-B123/kx_adminPage/blob/main/dssast-cms/XIUMI.md}{秀米技术配置说明}。
+
+\section{发布检查与常见问题}
+
+\subsection{发布检查}
+\begin{itemize}
+  \item \textbf{赛事}　核对日期、进度、报名起止时间和报名表权限，使用查看链接确认显示。
+  \item \textbf{学习笔记}　核对作者及资料来源，公开列表只应出现已发布稿件。退回时给出明确意见并确认已转草稿。
+  \item \textbf{新闻与公告}　核对栏目分类、正文图片、来源和发布时间，发布后访问对应栏目。
+  \item \textbf{秀米稿件}　确认导入后处于草稿状态，检查文章和媒体是否完整，再进行发布。
+\end{itemize}
+
+\begin{manualtable}{常见问题与处理}
+  \begin{tabularx}{\linewidth}{@{}p{39mm}Y@{}}
+    \toprule
+    \textbf{现象} & \textbf{处理方法} \\
+    \midrule
+    后台缺少管理菜单 & 确认以管理员身份登录，检查 DSSAST CMS 是否已启用。 \\
+    正文更新，赛事时间没变 & 查看业务字段保存提示，修正时间格式、起止顺序及链接后重新保存。 \\
+    学生无法修改稿件 & 检查稿件状态与作者账号。需要修改的待审核稿件由管理员退回。 \\
+    投稿页提示验证失败 & 复制未保存的正文，刷新页面或重新登录再提交。持续出现时请运维检查投稿页缓存。 \\
+    笔记保存后仍为草稿 & 检查“退回作者修改”的勾选状态，再按审核结果操作。 \\
+    新闻或公告没有出现在栏目 & 核对文章分类、发布状态及定时发布时间。 \\
+    秀米认证或绑定失败 & 查看最近错误，请技术维护人员核对应用凭据、HTTPS、授权转发和绑定通知。 \\
+    图文已导入，图片缺失 & 核对文件格式和大小，请技术维护人员确认 PHP 图像处理扩展。 \\
+    \bottomrule
+  \end{tabularx}
+\end{manualtable}
+
+\section{维护与交接}
+
+\subsection{安装与升级}
+正式站安装或升级由管理员与技术维护人员协调。先在测试站进入\menu{插件}{安装插件}，选择 \textbf{上传插件}，上传 DSSAST CMS 的 ZIP 安装包并启用。确认菜单、内容编辑与投稿流程正常后，备份正式站数据库、插件文件和上传目录，安排更新。更新后在\menu{插件}{已安装插件}确认版本与启用状态，复查本手册的发布检查项。
+
+\subsection{交接清单}
+换届时应交接 WordPress 登录入口、个人账号分配、栏目分类、赛事更新负责人、笔记审核约定和秀米应用管理人。请新管理员在测试站完成一次赛事发布、笔记退回及重投，并检查新闻公告的归类。将投稿页及带编辑参数的地址排除在整页缓存之外。账号凭据和应用密钥通过各自的授权渠道交接。
+
+\end{document}
