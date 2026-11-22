@@ -7,9 +7,9 @@ function dssast_fields() {
 function dssast_statuses() { return array( 'planned' => '筹备中', 'open' => '报名中', 'closed' => '报名结束', 'completed' => '已结束', 'cancelled' => '已取消' ); }
 function dssast_register_competitions() {
  register_post_type( 'dssast_competition', array(
-  'labels' => array( 'name' => '赛事', 'singular_name' => '赛事', 'add_new_item' => '添加赛事', 'edit_item' => '编辑赛事' ),
+  'labels' => array( 'name' => '赛事', 'singular_name' => '赛事', 'menu_name' => '赛事管理', 'all_items' => '赛事列表', 'add_new_item' => '添加赛事', 'edit_item' => '编辑赛事' ),
   'public' => true, 'show_in_rest' => true, 'has_archive' => true, 'rewrite' => array( 'slug' => 'competitions' ),
-  'menu_icon' => 'dashicons-awards', 'supports' => array( 'title', 'editor', 'excerpt', 'thumbnail', 'revisions' ),
+  'menu_icon' => 'dashicons-awards', 'menu_position' => 27, 'supports' => array( 'title', 'editor', 'excerpt', 'thumbnail', 'revisions' ),
   'capabilities' => array( 'edit_posts' => 'manage_options', 'edit_others_posts' => 'manage_options', 'publish_posts' => 'manage_options', 'read_private_posts' => 'manage_options', 'delete_posts' => 'manage_options', 'delete_private_posts' => 'manage_options', 'delete_published_posts' => 'manage_options', 'delete_others_posts' => 'manage_options', 'edit_private_posts' => 'manage_options', 'edit_published_posts' => 'manage_options', 'create_posts' => 'manage_options' ), 'map_meta_cap' => true,
  ) );
  register_taxonomy( 'dssast_competition_category', 'dssast_competition', array( 'label' => '赛事分类', 'hierarchical' => true, 'show_in_rest' => true, 'capabilities' => array( 'manage_terms' => 'manage_options', 'edit_terms' => 'manage_options', 'delete_terms' => 'manage_options', 'assign_terms' => 'manage_options' ) ) );
