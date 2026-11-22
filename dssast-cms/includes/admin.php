@@ -58,7 +58,7 @@ function dssast_new_content_url( $view ) {
         return add_query_arg( 'post_type', $view['type'], admin_url( 'post-new.php' ) );
     }
 
-    $term = get_term_by( 'slug', $view['category'], 'category' );
+    $term = dssast_editorial_category( $view['category'] );
     return $term ? add_query_arg( 'dssast_category', $term->term_id, admin_url( 'post-new.php' ) ) : '';
 }
 
@@ -71,7 +71,9 @@ add_action( 'load-post-new.php', function () {
     }
 
     $term = get_term( absint( $_GET['dssast_category'] ), 'category' );
-    if ( ! $term || is_wp_error( $term ) || ! in_array( $term->slug, array( 'dssast-news', 'dssast-announcement' ), true ) ) {
+    $news = dssast_editorial_category( 'dssast-news' );
+    $announcement = dssast_editorial_category( 'dssast-announcement' );
+    if ( ! $term || is_wp_error( $term ) || ! in_array( $term->term_id, array( $news->term_id ?? 0, $announcement->term_id ?? 0 ), true ) ) {
         return;
     }
 
@@ -169,7 +171,7 @@ function dssast_management_list( $key ) {
         'update_post_meta_cache' => false,
     );
     if ( $view['category'] ) {
-        $term = get_term_by( 'slug', $view['category'], 'category' );
+        $term = dssast_editorial_category( $view['category'] );
         if ( $term ) {
             $args['cat'] = (int) $term->term_id;
         } else {

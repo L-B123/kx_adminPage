@@ -12,8 +12,8 @@ wp_set_current_user(1);
 verify(post_type_exists('dssast_note') && post_type_exists('dssast_competition'), 'content types');
 verify(get_post_type_object('dssast_note')->has_archive === 'dssast-notes' &&
     get_post_type_object('dssast_note')->rewrite['slug'] === 'notes', 'note archive leaves the landing page and existing single-note permalinks available');
-$news = get_term_by('slug', 'dssast-news', 'category');
-$announcement = get_term_by('slug', 'dssast-announcement', 'category');
+$news = dssast_editorial_category('dssast-news');
+$announcement = dssast_editorial_category('dssast-announcement');
 verify($news && $announcement, 'news and announcement categories');
 verify(!use_block_editor_for_post_type('dssast_competition') && !use_block_editor_for_post_type('dssast_note'), 'competition and note use the classic editor');
 ob_start();
@@ -32,6 +32,7 @@ $announcement_title = 'Announcement ' . wp_generate_password(12, false);
 wp_update_post(array('ID' => $announcement_post->ID, 'post_title' => $announcement_title, 'post_status' => 'publish'));
 verify(strpos(do_shortcode('[dssast_news category="dssast-announcement"]'), $announcement_title) !== false &&
     strpos(do_shortcode('[dssast_news]'), $announcement_title) === false, 'announcement appears only in its public list');
+verify(strpos(do_shortcode('[dssast_news category="announcements"]'), $announcement_title) !== false, 'official site announcement shortcode alias works');
 wp_delete_post($announcement_post->ID, true);
 $subscriber = wp_insert_user(array('user_login'=>'test_' . bin2hex(random_bytes(4)), 'user_pass'=>bin2hex(random_bytes(16)), 'role'=>'subscriber'));
 verify(!user_can($subscriber, 'edit_posts', 'dssast_note'), 'subscriber cannot edit posts');
