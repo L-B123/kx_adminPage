@@ -51,8 +51,8 @@ php dssast-cms/tests/integration.php /path/to/wordpress/wp-load.php
 | 赛事列表 | `[dssast_competitions limit="10"]` | [赛事](https://dssast.cn/events/) |
 | 公开笔记 | `[dssast_notes]` | [学习笔记](https://dssast.cn/notes/) |
 | 笔记投稿 | `[dssast_note_submit]` | [笔记投稿](https://dssast.cn/note-submit/) |
-| 新闻 | `[dssast_news]` | 由前台团队确定 |
-| 公告 | `[dssast_news category="dssast-announcement"]` | 由前台团队确定 |
+| 新闻 | `[dssast_news]` | [新闻](https://dssast.cn/news/) |
+| 公告 | `[dssast_news category="dssast-announcement"]` | [公告](https://dssast.cn/announcements/) |
 
 ## 目录与文档
 

@@ -33,7 +33,7 @@ function dssast_content_list( $atts, $content, $tag ) {
   $term = dssast_editorial_category( $category );
   $args['category_name'] = $term ? $term->slug : $category;
  }
- $query = new WP_Query( $args ); $html = '<div class="dssast-content-list">';
+ $query = new WP_Query( $args ); $html = '<div class="dssast-content-list content-list">';
  foreach ( $query->posts as $post ) { $html .= '<article><h2><a href="' . esc_url( get_permalink( $post ) ) . '">' . esc_html( get_the_title( $post ) ) . '</a></h2><p>' . esc_html( wp_trim_words( wp_strip_all_tags( $post->post_excerpt ?: strip_shortcodes( $post->post_content ) ), 40 ) ) . '</p></article>'; }
  return $html . ( $query->posts ? '' : '<p>暂无内容。</p>' ) . '</div>';
 }
